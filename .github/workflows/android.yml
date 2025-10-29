@@ -27,12 +27,12 @@ jobs:
           if [ -f "./gradlew" ]; then
             echo "Found gradlew -> using Gradle wrapper"
             chmod +x ./gradlew
-            ./gradlew assembleDebug --no-daemon
+            ./gradlew assembleDebug --no-daemon --stacktrace --info
           else
             echo "No gradlew found -> installing gradle via apt"
             sudo apt-get update
             sudo apt-get install -y gradle
-            gradle assembleDebug --no-daemon
+            gradle assembleDebug --no-daemon --stacktrace --info
           fi
         env:
           JAVA_TOOL_OPTIONS: -Xmx2g
