@@ -1,1 +1,2 @@
-rootProject.name = 'TrainingTimer'
+rootProject.name = "TrainingTimer"
+include(":app")
