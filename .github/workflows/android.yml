@@ -1,44 +1,68 @@
-
-name: Build Android APK
+name: Android Build
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # 1. 检出代码
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    # 2. 设置 JDK
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 17
 
-      - name: Build (use gradlew if present, otherwise install gradle)
-        shell: bash
-        run: |
-          if [ -f "./gradlew" ]; then
-            echo "Found gradlew -> using Gradle wrapper"
-            chmod +x ./gradlew
-            ./gradlew assembleDebug --no-daemon --stacktrace --info
-          else
-            echo "No gradlew found -> installing gradle via apt"
-            sudo apt-get update
-            sudo apt-get install -y gradle
-            gradle assembleDebug --no-daemon --stacktrace --info
-          fi
-        env:
-          JAVA_TOOL_OPTIONS: -Xmx2g
+    # 3. 安装 Android SDK 命令行工具
+    - name: Install Android SDK
+      run: |
+        mkdir -p $ANDROID_SDK_ROOT
+        cd $ANDROID_SDK_ROOT
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        unzip cmdline-tools.zip
+        rm cmdline-tools.zip
+        mkdir -p cmdline-tools
+        mv cmdline-tools cmdline-tools/latest
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: TrainingTimer-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+    # 4. 缓存 Gradle 构建
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper/
+        key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-${{ runner.os }}-
+
+    # 5. Build APK
+    - name: Build Debug APK
+      run: ./gradlew :app:assembleDebug --stacktrace
+      env:
+        ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+        PATH: ${{ github.workspace }}/android-sdk/platform-tools:${PATH}
+
+    # 6. 上传生成的 APK
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: TrainingTimer-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
