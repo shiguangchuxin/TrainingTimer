@@ -24,7 +24,6 @@ jobs:
       - name: Build (use gradlew if present, otherwise install gradle)
         shell: bash
         run: |
-          cd TrainingTimer
           if [ -f "./gradlew" ]; then
             echo "Found gradlew -> using Gradle wrapper"
             chmod +x ./gradlew
