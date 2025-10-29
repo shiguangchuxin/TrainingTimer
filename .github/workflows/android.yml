@@ -1,6 +1,6 @@
+
 name: Build Android APK
 
-# Trigger on pushes to main and manual dispatch
 on:
   push:
     branches:
@@ -9,7 +9,6 @@ on:
 
 jobs:
   build:
-    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
@@ -22,11 +21,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Make Gradlew executable
-        run: chmod +x ./gradlew
-
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Build (use gradlew if present, otherwise install gradle)
+        shell: bash
+        run: |
+          if [ -f "./gradlew" ]; then
+            echo "Found gradlew -> using Gradle wrapper"
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --no-daemon
+          else
+            echo "No gradlew found -> installing gradle via apt"
+            sudo apt-get update
+            sudo apt-get install -y gradle
+            gradle assembleDebug --no-daemon
+          fi
         env:
           JAVA_TOOL_OPTIONS: -Xmx2g
 
@@ -35,4 +42,3 @@ jobs:
         with:
           name: TrainingTimer-APK
           path: app/build/outputs/apk/debug/app-debug.apk
-
